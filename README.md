@@ -2,3 +2,6 @@
 DATE_NAGER_API_BASE_URL=
 COUNTRIES_NOW_API_BASE_URL=
 PORT=3000
+
+# To run
+write npm run start:dev
