@@ -11,71 +11,62 @@ export class CountryService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getAvailableCountries(): Promise<Country[]> {
-    try {
-      const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
-      const response = await axios.get<Country[]>(`${baseUrl}/AvailableCountries`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch available countries: ${error.message}`);
-    }
-  }
-
-  async getCountryInfo(countryCode: string): Promise<CountryInfo> {
-    try {
-      const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
-      const response = await axios.get<CountryInfo>(`${baseUrl}/CountryInfo/${countryCode}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch country info: ${error.message}`);
-    }
-  }
-
-  async getPopulationData(countryName: string): Promise<PopulationData> {
-  try {
-    const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
-    const response = await axios.post<PopulationData>(`${baseUrl}/population`, {
-      country: countryName,
-    });
+async getCountryInfo(code: string): Promise<CountryInfo> {
+    const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
+    const response = await axios.get<CountryInfo>(`${baseUrl}/CountryInfo/${code}`);
     return response.data;
-  } catch (error) {
-    throw new Error(`Failed to fetch population data: ${error.message}`);
   }
-}
 
-  async getFlagData(countryCode: string): Promise<FlagData> {
-    try {
-      const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
-      const response = await axios.post<FlagData>(`${baseUrl}/flag/images`, {
-        iso2: countryCode,
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch flag data: ${error.message}`);
+  async getAvailableCountries(): Promise<Country[]> {
+    const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
+    const response = await axios.get<Country[]>(`${baseUrl}/AvailableCountries`);
+    return response.data;
+  }
+
+  async getCountryNameFromCode(code: string): Promise<string> {
+    const countries = await this.getAvailableCountries();
+    const match = countries.find(c => c.countryCode === code);
+    if (!match) throw new Error(`Country code ${code} not found.`);
+    return match.name;
+  }
+
+  async getPopulationData(name: string): Promise<PopulationData> {
+    const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
+    const response = await axios.post(`${baseUrl}/population`, {
+      country: name,
+    });
+    if (!response.data || !response.data.data) {
+      throw new Error(`Population data not found for ${name}`);
     }
+    return response.data.data;
   }
 
-  async getCountryNameFromCode(countryCode: string): Promise<string> {
-  const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
-  const response = await axios.get(`${baseUrl}/AvailableCountries`);
-  const countries: Country[] = response.data;
+  async getFlagData(code: string) {
+    const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
+    const countries = await this.getAvailableCountries();
+    const name = countries.find(c => c.countryCode === code)?.name;
+    if (!name) throw new Error(`Country name not found for code: ${code}`);
 
-  const matched = countries.find(
-    (c) => c.countryCode.toUpperCase() === countryCode.toUpperCase(),
-  );
+    const response = await axios.post(`${baseUrl}/flag/images`, {
+      iso2: code,
+    });
 
-  if (!matched) {
-    throw new Error(`Country with code ${countryCode} not found`);
+    if (!response.data?.data) {
+      throw new Error(`Flag not found for code ${code}`);
+    }
+
+    return response.data.data;
   }
-
-  return matched.name;
-}
 
   async getCountryDetails(countryCode: string): Promise<any> {
     try {
+      // 1. Get info from Nager API (includes borders)
       const countryInfo = await this.getCountryInfo(countryCode);
+
+      // 2. Get country name to use in CountriesNow API
       const countryName = await this.getCountryNameFromCode(countryCode);
 
+      // 3. Get flag + population data in parallel
       const [populationData, flagData] = await Promise.all([
         this.getPopulationData(countryName),
         this.getFlagData(countryCode),
@@ -84,7 +75,7 @@ export class CountryService {
       return {
         name: countryInfo.name,
         countryCode: countryInfo.countryCode,
-        borders: countryInfo.borders,
+        borders: countryInfo.borders, // Already detailed
         populationData: populationData.populationCounts,
         flagUrl: flagData.flag,
       };

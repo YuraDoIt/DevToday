@@ -40,10 +40,6 @@ export class CountryController {
     description: 'ISO2 country code (e.g. "UA", "US", "DE")',
     type: String,
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Detailed information about the country',
-  })
   async getCountryDetails(
     @Param('countryCode') countryCode: string,
   ): Promise<any> {
