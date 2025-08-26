@@ -1,42 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { Country, CountryInfo, PopulationData, FlagData } from './country.interface';
 
-export interface Country {
-  countryCode: string;
-  name: string;
-}
 
-export interface CountryInfo {
-  name: string;
-  countryCode: string;
-  borders: BorderCountry[];
-}
-
-export interface BorderCountry {
-  commonName: string;
-  officialName: string;
-  countryCode: string;
-  region: string;
-  borders: string[];
-}
-
-export interface PopulationData {
-  country: string;
-  code: string;
-  iso3: string;
-  populationCounts: PopulationCount[];
-}
-
-export interface PopulationCount {
-  year: number;
-  value: number;
-}
-
-export interface FlagData {
-  name: string;
-  flag: string;
-}
 
 @Injectable()
 export class CountryService {
@@ -64,17 +31,17 @@ export class CountryService {
     }
   }
 
-  async getPopulationData(countryCode: string): Promise<PopulationData> {
-    try {
-      const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
-      const response = await axios.post<PopulationData>(`${baseUrl}/population`, {
-        country: countryCode,
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch population data: ${error.message}`);
-    }
+  async getPopulationData(countryName: string): Promise<PopulationData> {
+  try {
+    const baseUrl = this.configService.get<string>('COUNTRIES_NOW_API_BASE_URL');
+    const response = await axios.post<PopulationData>(`${baseUrl}/population`, {
+      country: countryName,
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to fetch population data: ${error.message}`);
   }
+}
 
   async getFlagData(countryCode: string): Promise<FlagData> {
     try {
@@ -88,16 +55,32 @@ export class CountryService {
     }
   }
 
+  async getCountryNameFromCode(countryCode: string): Promise<string> {
+  const baseUrl = this.configService.get<string>('DATE_NAGER_API_BASE_URL');
+  const response = await axios.get(`${baseUrl}/AvailableCountries`);
+  const countries: Country[] = response.data;
+
+  const matched = countries.find(
+    (c) => c.countryCode.toUpperCase() === countryCode.toUpperCase(),
+  );
+
+  if (!matched) {
+    throw new Error(`Country with code ${countryCode} not found`);
+  }
+
+  return matched.name;
+}
+
   async getCountryDetails(countryCode: string): Promise<any> {
     try {
-      // Fetch data from all three sources in parallel
-      const [countryInfo, populationData, flagData] = await Promise.all([
-        this.getCountryInfo(countryCode),
-        this.getPopulationData(countryCode),
+      const countryInfo = await this.getCountryInfo(countryCode);
+      const countryName = await this.getCountryNameFromCode(countryCode);
+
+      const [populationData, flagData] = await Promise.all([
+        this.getPopulationData(countryName),
         this.getFlagData(countryCode),
       ]);
 
-      // Combine the data
       return {
         name: countryInfo.name,
         countryCode: countryInfo.countryCode,
@@ -106,7 +89,10 @@ export class CountryService {
         flagUrl: flagData.flag,
       };
     } catch (error) {
-      throw new Error(`Failed to fetch country details: ${error.message}`);
+      throw new HttpException(
+        `Failed to fetch country details: ${error.message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
     }
   }
 }
