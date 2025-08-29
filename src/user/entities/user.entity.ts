@@ -1,4 +1,4 @@
-import { CalendarEventEntity } from "src/calendar/entities/calendar-event.entity";
+import { CalendarEventEntity } from "../../calendar/entities/calendar-event.entity";
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 
 @Entity('users')

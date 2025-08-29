@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService, ConfigModule as NestConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CalendarEventEntity } from 'src/calendar/entities/calendar-event.entity';
-import { UserEntity } from 'src/user/entities/user.entity';
+import { CalendarEventEntity } from '../calendar/entities/calendar-event.entity';
+import { UserEntity } from '../user/entities/user.entity';
 
 @Module({
   imports: [

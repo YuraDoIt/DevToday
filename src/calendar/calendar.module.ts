@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CalendarService } from './calendar.service';
 import { CalendarController } from './calendar.controller';
 import { CalendarEventEntity } from './entities/calendar-event.entity';
-import { UserEntity } from 'src/user/entities/user.entity';
+import { UserEntity } from '../user/entities/user.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([CalendarEventEntity, UserEntity])],
