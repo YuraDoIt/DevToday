@@ -1,9 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { Country, CountryInfo, PopulationData, FlagData } from './country.interface';
-
-
+import { Country, CountryInfo, PopulationData, FlagData } from './interfaces/country.interface';
 
 @Injectable()
 export class CountryService {
