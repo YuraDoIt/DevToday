@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
 import { CalendarService } from './calendar.service';
-import { AddHolidaysDto } from './dto/create-holiday.dto';
+import { AddHolidaysDto } from './dto/add-holiday.dto';
 
 @ApiTags('Calendar')
 @Controller('users/:userId/calendar')

@@ -1,47 +1,68 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import axios from 'axios';
-import { AddHolidaysDto } from './dto/create-holiday.dto';
+import { AddHolidaysDto } from './dto/add-holiday.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CalendarEventEntity } from './entities/calendar-event.entity';
+import { UserEntity } from '../user/entities/user.entity';
 
 @Injectable()
 export class CalendarService {
-  private userCalendars: Record<string, any[]> = {}; // Simulated DB
+  constructor(
+    @InjectRepository(CalendarEventEntity)
+    private readonly calendarRepo: Repository<CalendarEventEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepo: Repository<UserEntity>,
+  ) {}
 
-  async addHolidaysToCalendar(userId: string, dto: AddHolidaysDto): Promise<any> {
+  async addHolidaysToCalendar(userId: string, dto: AddHolidaysDto) {
     try {
       const { countryCode, year, holidays } = dto;
-      const response = await axios.get(
-        `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`
+
+      const { data } = await axios.get(
+        `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`,
       );
 
-      let allHolidays = response.data; // Array of holiday objects
+      let selected = data as Array<{ localName: string; date: string }>;
 
-      if (holidays && holidays.length > 0) {
-        allHolidays = allHolidays.filter((h: any) =>
-          holidays.includes(h.localName)
-        );
+      if (holidays?.length) {
+        const set = new Set(holidays);
+        selected = selected.filter((h) => set.has(h.localName));
       }
 
-      // Save to in-memory DB
-      if (!this.userCalendars[userId]) {
-        this.userCalendars[userId] = [];
+      const user = await this.userRepo.findOne({ where: { id: userId } });
+      if (!user) {
+        throw new HttpException(`User ${userId} not found`, HttpStatus.NOT_FOUND);
       }
 
-      this.userCalendars[userId].push(...allHolidays);
+      const events = selected.map((h) =>
+        this.calendarRepo.create({
+          title: h.localName,
+          date: h.date,
+          countryCode,
+          user,
+        }),
+      );
+
+      await this.calendarRepo.save(events);
 
       return {
-        message: `${allHolidays.length} holidays added to user ${userId}'s calendar.`,
-        savedHolidays: allHolidays,
+        message: `${events.length} holidays added to user ${userId}'s calendar.`,
+        savedHolidays: events,
       };
-    } catch (error) {
+    } catch (error: any) {
       throw new HttpException(
         `Failed to add holidays: ${error.message}`,
-        HttpStatus.BAD_GATEWAY
+        HttpStatus.BAD_GATEWAY,
       );
     }
   }
 
-  // Optional: get calendar
-  getUserCalendar(userId: string) {
-    return this.userCalendars[userId] || [];
+  async getUserCalendar(userId: string) {
+    return this.calendarRepo.find({
+      where: { user: { id: userId } },
+      relations: ['user'],
+      order: { date: 'ASC' },
+    });
   }
 }
