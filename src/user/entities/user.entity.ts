@@ -1,7 +1,8 @@
+import { CalendarEventEntity } from "src/calendar/entities/calendar-event.entity";
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 
-@Entity()
-export class User {
+@Entity('users')
+export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -11,6 +12,6 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-//   @OneToMany(() => CalendarEvent, (event) => event.user)
-//   calendarEvents: CalendarEvent[];
+  @OneToMany(() => CalendarEventEntity, (event) => event.user)
+  calendarEvents: CalendarEventEntity[];
 }

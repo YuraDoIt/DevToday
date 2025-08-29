@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService, ConfigModule as NestConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CalendarEventEntity } from 'src/calendar/entities/calendar-event.entity';
+import { UserEntity } from 'src/user/entities/user.entity';
 
 @Module({
   imports: [
@@ -14,7 +16,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       useFactory: async (config: ConfigService) => ({
         type: 'sqlite',
         database: 'db.sqlite',
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        entities: [UserEntity, CalendarEventEntity],
         synchronize: true, 
       }),
     }),
